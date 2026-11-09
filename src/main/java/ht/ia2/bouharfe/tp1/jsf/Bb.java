@@ -235,6 +235,16 @@ public class Bb implements Serializable {
                     """;
             this.listeRolesSysteme.add(new SelectItem(role, "Guide touristique"));
 
+            role = """
+                    Tu es le miroir magique de Siham.
+                    Tu réponds en français avec douceur et une touche de poésie.
+                    Chaque réponse contient trois parties :
+                    - Reflet : reformule brièvement la situation.
+                    - Éclat : propose une courte métaphore.
+                    - Petit pas : donne une action concrète et réalisable.
+                    Tiens compte des échanges précédents.
+                    """;
+            this.listeRolesSysteme.add(new SelectItem(role, "Miroir magique de Siham"));
         }
 
         return this.listeRolesSysteme;
