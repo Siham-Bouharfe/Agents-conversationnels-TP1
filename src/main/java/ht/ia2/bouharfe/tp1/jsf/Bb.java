@@ -1,7 +1,10 @@
 package ht.ia2.bouharfe.tp1.jsf;
 
 
-import ht.ia2.bouharfe.tp1_bouharfe_siham.service.GenerateurReponse;
+
+import ht.ia2.bouharfe.tp1.llm.JsonAdapterPourGemini;
+import ht.ia2.bouharfe.tp1.llm.LlmInteraction;
+
 import jakarta.faces.application.FacesMessage;
 import jakarta.faces.context.FacesContext;
 import jakarta.faces.model.SelectItem;
@@ -12,7 +15,7 @@ import jakarta.inject.Named;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
-
+import java.util.Arrays;
 /**
  * Backing bean pour la page JSF index.xhtml.
  * Portée view pour conserver l'état de la conversation qui dure pendant plusieurs requêtes HTTP.
@@ -56,13 +59,17 @@ public class Bb implements Serializable {
      * Service pour modifier la question et générer la réponse.
      */
     @Inject
-    private GenerateurReponse generateurReponse;
+    private JsonAdapterPourGemini jsonAdapter;
 
     /**
      * Contexte JSF. Utilisé pour qu'un message d'erreur s'affiche dans le formulaire.
      */
     @Inject
     private FacesContext facesContext;
+
+    private boolean debug;
+    private String texteRequeteJson;
+    private String texteReponseJson;
 
     /**
      * Obligatoire pour un bean CDI (classe gérée par CDI), s'il y a un autre constructeur.
@@ -132,9 +139,26 @@ public class Bb implements Serializable {
         if (this.conversation.isEmpty()) { // Si la conversation n'a pas encore commencé
             // Fige la liste déroulante qui permet de choisir le rôle système
             this.roleSystemeChangeable = false;
+            this.jsonAdapter.setSystemRole(this.roleSysteme);
         }
-        this.reponse = this.generateurReponse.genererReponse(
-                this.question, this.roleSysteme);
+        try{
+            LlmInteraction interaction = jsonAdapter.envoyerRequete(this.question);
+
+            this.reponse = interaction.reponseExtraite();
+            this.texteRequeteJson = interaction.questionJson();
+            this.texteReponseJson = interaction.reponseJson();
+        }catch (Exception e){
+            this.reponse = "Erreur : " + e.getMessage();
+
+            FacesMessage message = new FacesMessage(
+                    FacesMessage.SEVERITY_ERROR,
+                    "Problème de connexion avec l'API du LLM",
+                    "Problème de connexion avec l'API du LLM : "
+                            + e.getMessage() + "\n"
+                            + Arrays.toString(e.getStackTrace())
+            );
+            facesContext.addMessage(null, message);
+        }
         // La conversation contient l'historique des questions-réponses depuis le début.
         afficherConversation();
         return null;
@@ -158,6 +182,30 @@ public class Bb implements Serializable {
      */
     private void afficherConversation() {
         this.conversation.append("== User:\n").append(question).append("\n== Serveur:\n").append(reponse).append("\n");
+    }
+
+    public boolean isDebug() {
+        return debug;
+    }
+
+    public void setDebug(boolean debug) {
+        this.debug = debug;
+    }
+
+    public String getTexteRequeteJson() {
+        return texteRequeteJson;
+    }
+
+    public void setTexteRequeteJson(String texteRequeteJson) {
+        this.texteRequeteJson = texteRequeteJson;
+    }
+
+    public String getTexteReponseJson() {
+        return texteReponseJson;
+    }
+
+    public void setTexteReponseJson(String texteReponseJson) {
+        this.texteReponseJson = texteReponseJson;
     }
 
     public List<SelectItem> getRolesSysteme() {
